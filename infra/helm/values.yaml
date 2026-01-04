@@ -1,0 +1,26 @@
+replicaCount: 3
+
+image:
+  repository: my-registry/api-gateway
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+service:
+  type: ClusterIP
+  port: 8080
+
+ingress:
+  enabled: true
+  className: "nginx"
+  hosts:
+    - host: api.example.com
+      paths:
+        - path: /
+          pathType: ImplementationSpecific
+
+redis:
+  host: redis-master
+  port: 6379
+
+kafka:
+  bootstrapServers: kafka:9092
