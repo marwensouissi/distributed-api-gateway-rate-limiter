@@ -17,7 +17,7 @@ graph TD
 
     Metrics -->|Store| Redis
     Analytics -->|Alert| Kafka
-
+```
 
 
 ## Features
