@@ -6,18 +6,19 @@ A high-performance, stateless API Gateway built with Java 17, Spring Boot 3, and
 
 ```mermaid
 graph TD
-    Client[Clients] -->|HTTP| Gateway[API Gateway (Spring Cloud)]
-    Gateway -->|Rate Limit Checks| Redis[(Redis Cluster)]
-    Gateway -->|Async Events| Kafka{Kafka Broker}
-    Gateway -->|Proxy| Backend[Backend Services]
-    
-    Kafka -->|Consume| Analytics[Security Analytics Service]
-    Kafka -->|Consume| Metrics[Metrics Service]
-    Kafka -->|Consume| Audit[Audit Log Service]
-    
+    Client["Clients"] -->|HTTP| Gateway["API Gateway - Spring Cloud"]
+    Gateway -->|Rate Limit Checks| Redis["Redis Cluster"]
+    Gateway -->|Async Events| Kafka["Kafka Broker"]
+    Gateway -->|Proxy| Backend["Backend Services"]
+
+    Kafka -->|Consume| Analytics["Security Analytics Service"]
+    Kafka -->|Consume| Metrics["Metrics Service"]
+    Kafka -->|Consume| Audit["Audit Log Service"]
+
     Metrics -->|Store| Redis
     Analytics -->|Alert| Kafka
-```
+
+
 
 ## Features
 
