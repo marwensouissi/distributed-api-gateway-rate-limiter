@@ -34,6 +34,12 @@ public class ObservabilityFilter implements GlobalFilter, Ordered {
             String userId = exchange.getAttribute("userId");
             String apiKey = exchange.getAttribute("apiKey");
 
+            // Determine the status and event type
+            int status = exchange.getResponse().getStatusCode() != null
+                    ? exchange.getResponse().getStatusCode().value()
+                    : 500;
+            String eventType = (status == 429) ? "BLOCKED" : "ALLOWED";
+
             RequestEvent event = RequestEvent.builder()
                     .timestamp(Instant.now().toString())
                     .requestId(requestId)
@@ -43,18 +49,10 @@ public class ObservabilityFilter implements GlobalFilter, Ordered {
                     .apiKey(apiKey)
                     .endpoint(request.getPath().value())
                     .method(request.getMethod().name())
-                    .status(exchange.getResponse().getStatusCode() != null
-                            ? exchange.getResponse().getStatusCode().value()
-                            : 500)
+                    .status(status)
                     .latencyMs(duration)
-                    .type("ALLOWED")
+                    .type(eventType)
                     .build();
-
-            // If status is 429, type is blocked (handled usually in RateLimitFilter, but if
-            // response is 429 here we capture it too)
-            if (event.getStatus() == 429) {
-                event.setType("BLOCKED");
-            }
 
             kafkaPublisher.publishEvent(event);
         }));
