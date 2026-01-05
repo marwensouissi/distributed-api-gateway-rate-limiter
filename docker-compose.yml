@@ -1,17 +1,6 @@
 version: '3.8'
 
 services:
-  # -------------------------------------------------------------------------
-  # Redis (Simulating a cluster or HA setup roughly with a single instance for dev, 
-  # or we can do a proper cluster. For simplicity and stability in Docker Compose 
-  # on Windows, handling a full Redis Cluster with slot mapping is complex.
-  # We will use a standard Redis instance but implemented with failover logic in code.)
-  # REQUIREMENT: "Redis Cluster" is listed. I will provide a 3-node setup if possible, 
-  # but standard Redis is safer for basic docker-compose. 
-  # Let's try to stick to a robust single instance for the "dev" compose, 
-  # but I'll add a second one to simulate failover if I can.
-  # Actually, let's stick to one 'redis' service for stability, but configured for persistence.
-  # -------------------------------------------------------------------------
   redis:
     image: redis:7.0-alpine
     container_name: redis
@@ -25,10 +14,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-
-  # -------------------------------------------------------------------------
-  # Zookeeper (Required for Kafka)
-  # -------------------------------------------------------------------------
   zookeeper:
     image: confluentinc/cp-zookeeper:7.4.0
     container_name: zookeeper
@@ -38,9 +23,6 @@ services:
     networks:
       - gateway-net
 
-  # -------------------------------------------------------------------------
-  # Kafka Brokers (3 Nodes as requested)
-  # -------------------------------------------------------------------------
   kafka1:
     image: confluentinc/cp-kafka:7.4.0
     container_name: kafka1
