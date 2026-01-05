@@ -10,7 +10,7 @@ export default function () {
     // Test Security Headers and Auth
 
     // 1. Valid API Key
-    let resKey = http.get('http://localhost:8080/api/v1/resource', {
+    let resKey = http.get('http://localhost:8033/api/v1/resource', {
         headers: { 'X-API-KEY': 'secret-key' }
     });
     check(resKey, { 'API Key Valid': (r) => r.status === 200 });
@@ -23,6 +23,6 @@ export default function () {
     // We expect 429s after 100 requests.
 
     for (let i = 0; i < 15; i++) {
-        http.get('http://localhost:8080/api/v1/resource');
+        http.get('http://localhost:8033/api/v1/resource');
     }
 }

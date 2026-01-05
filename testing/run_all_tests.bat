@@ -10,7 +10,7 @@ echo =====================================================================
 echo.
 
 set GATEWAY_URL=http://localhost:8082
-set BACKEND_URL=http://localhost:8081
+set BACKEND_URL=http://localhost:8034
 
 REM =====================================================================
 echo [TEST 1/7] Infrastructure Health Check

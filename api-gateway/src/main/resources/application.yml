@@ -21,7 +21,7 @@ spring:
     gateway:
       routes:
         - id: backend_service
-          uri: http://localhost:8081
+          uri: http://localhost:8034
           predicates:
             - Path=/api/**
           filters:

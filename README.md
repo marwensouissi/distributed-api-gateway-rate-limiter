@@ -59,7 +59,7 @@ graph TD
 
 3. **Verify**:
    ```bash
-   curl -i http://localhost:8080/api/v1/resource
+   curl -i http://localhost:8033/api/v1/resource
    ```
 
 4. **Load Testing**:

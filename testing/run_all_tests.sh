@@ -7,7 +7,7 @@
 set -e
 
 GATEWAY_URL="http://localhost:8082"
-BACKEND_URL="http://localhost:8081"
+BACKEND_URL="http://localhost:8034"
 GREEN='\033[0;32m'
 RED='\033[0;31m'
 NC='\033[0m'

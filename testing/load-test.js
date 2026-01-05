@@ -43,16 +43,17 @@ export default function () {
     },
     tags: { name: 'valid_request' },
   };
-  
-  let res = http.get('http://localhost:8080/api/v1/resource', params);
-  
+
+  let res = http.get('http://localhost:8033/api/v1/resource', params);
+  console.log(res.body);
+
   check(res, {
     'status is 200': (r) => r.status === 200,
   }) || errorRate.add(1);
 
   // 2. Unauthenticated (should be allowed but tracked, or blocked depending on policy)
   // Our impl allows pass-through but with empty user.
-  
+
   // 3. Spam (Simulate High Rate)
   // This script itself acts as one "IP" effectively unless we distribute agents.
   // So eventually we expect 429 if the sliding window kicks in (Limit 100/min).
