@@ -4,22 +4,39 @@ This document provides all commands and scripts needed to test the Distributed A
 
 ## Prerequisites
 
-- Docker containers running (Redis, Kafka, Prometheus, Grafana)
-- API Gateway running on port 8082
-- k6 installed for load testing (optional)
+-   Docker and Docker Compose installed and running.
+-   Java 17 installed.
+-   k6 installed for load testing (optional).
 
 ---
 
 ## Quick Start
 
-Run the comprehensive test suite:
-
+### 1. Start Infrastructure
+Start Redis, Kafka, Zookeeper, Prometheus, and Grafana:
 ```powershell
-# Windows
-.\testing\run_all_tests.bat
+docker-compose up -d
+```
 
-# Linux/Mac
-chmod +x testing/run_all_tests.sh && ./testing/run_all_tests.sh
+### 2. Start Services
+Open separate terminals for each service:
+
+**Terminal 1: API Gateway** (Port 8033)
+```powershell
+cd api-gateway
+./mvnw spring-boot:run
+```
+
+**Terminal 2: Backend Service** (Port 8034)
+```powershell
+cd backend-service
+./mvnw spring-boot:run
+```
+
+**Terminal 3: Consumers (Optional)**
+```powershell
+cd security-analytics
+./mvnw spring-boot:run
 ```
 
 ---
@@ -30,26 +47,28 @@ chmod +x testing/run_all_tests.sh && ./testing/run_all_tests.sh
 
 ```powershell
 # API Gateway health
-curl http://localhost:8082/actuator/health
+curl http://localhost:8033/actuator/health
+
+# Backend health
+curl http://localhost:8034/actuator/health
 
 # Redis health
 docker exec redis redis-cli PING
-
-# Kafka broker list
-docker exec kafka1 kafka-topics --bootstrap-server localhost:29092 --list
 ```
 
 ### 2. Basic API Request
 
+The Gateway listens on port **8033** and forwards `/api/**` requests to the Backend on port **8034**.
+
 ```powershell
 # Simple GET request
-curl -i http://localhost:8082/api/v1/resource
+curl -i http://localhost:8033/api/v1/resource
 
 # With Authorization header
-curl -i -H "Authorization: Bearer test-token" http://localhost:8082/api/v1/resource
+curl -i -H "Authorization: Bearer test-token" http://localhost:8033/api/v1/resource
 
 # With API Key
-curl -i -H "X-API-KEY: secret-key" http://localhost:8082/api/v1/resource
+curl -i -H "X-API-KEY: secret-key" http://localhost:8033/api/v1/resource
 ```
 
 ### 3. Rate Limiting Test
@@ -57,7 +76,7 @@ curl -i -H "X-API-KEY: secret-key" http://localhost:8082/api/v1/resource
 ```powershell
 # PowerShell: Send 110 requests to trigger rate limiting
 1..110 | ForEach-Object { 
-    $status = (Invoke-WebRequest -Uri "http://localhost:8082/api/v1/resource" -Method GET -UseBasicParsing).StatusCode
+    $status = (Invoke-WebRequest -Uri "http://localhost:8033/api/v1/resource" -Method GET -UseBasicParsing).StatusCode
     Write-Host "Request $_`: HTTP $status"
 }
 ```
@@ -85,19 +104,13 @@ docker exec kafka1 kafka-topics --bootstrap-server localhost:29092 --list
 
 # Consume api-requests topic (real-time view)
 docker exec kafka1 kafka-console-consumer --bootstrap-server localhost:29092 --topic api-requests --from-beginning --max-messages 5
-
-# Check consumer groups
-docker exec kafka1 kafka-consumer-groups --bootstrap-server localhost:29092 --list
 ```
 
 ### 6. Prometheus Metrics
 
 ```powershell
 # View all metrics
-curl http://localhost:8082/actuator/prometheus
-
-# Filter specific metrics
-curl -s http://localhost:8082/actuator/prometheus | findstr "http_server_requests"
+curl http://localhost:8033/actuator/prometheus
 ```
 
 ### 7. Load Testing with k6
@@ -108,9 +121,6 @@ winget install k6
 
 # Run load test
 k6 run testing/load-test.js
-
-# Run security test
-k6 run testing/security-test.js
 ```
 
 ---
@@ -119,13 +129,12 @@ k6 run testing/security-test.js
 
 | Scenario | Command | Expected Result |
 |----------|---------|-----------------|
-| Normal Request | `curl http://localhost:8082/api/v1/resource` | `200 OK` |
+| Normal Request | `curl http://localhost:8033/api/v1/resource` | `200 OK` |
 | Rate Limited | Send 101+ requests/minute | `429 Too Many Requests` |
 | With JWT | `curl -H "Authorization: Bearer token" ...` | `200 OK` (logged) |
-| With API Key | `curl -H "X-API-KEY: key" ...` | `200 OK` (logged) |
-| Invalid Endpoint | `curl http://localhost:8082/invalid` | `404 Not Found` |
+| With Request ID | *Auto-generated internally* | Logged in Kafka |
+| Service Down | Backend (8034) stopped | `503 Service Unavailable` |
 | Metrics | `curl .../actuator/prometheus` | Prometheus format data |
-| Health | `curl .../actuator/health` | `{"status":"UP"}` |
 
 ---
 
@@ -133,7 +142,8 @@ k6 run testing/security-test.js
 
 | Service | URL | Credentials |
 |---------|-----|-------------|
-| API Gateway | http://localhost:8082 | - |
+| API Gateway | http://localhost:8033 | - |
+| Backend Service | http://localhost:8034 | - |
 | Prometheus | http://localhost:9090 | - |
 | Grafana | http://localhost:3000 | admin/admin |
 | Redis | localhost:6379 | - |
