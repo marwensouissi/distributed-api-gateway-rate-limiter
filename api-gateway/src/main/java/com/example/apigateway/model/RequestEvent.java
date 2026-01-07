@@ -6,6 +6,7 @@ import lombok.Data;
 @Data
 @Builder
 public class RequestEvent {
+
     private String timestamp;
     private String requestId;
     private String ip;
@@ -15,5 +16,9 @@ public class RequestEvent {
     private String method;
     private int status;
     private long latencyMs;
-    private String type; // "ALLOWED", "BLOCKED", "SECURITY_ALERT"
+    private String type;
+
+    public enum EventType {
+        ALLOWED, BLOCKED, SECURITY_ALERT
+    }
 }

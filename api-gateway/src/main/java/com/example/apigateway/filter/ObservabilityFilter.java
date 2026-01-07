@@ -18,48 +18,59 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class ObservabilityFilter implements GlobalFilter, Ordered {
 
+    private static final String ATTR_REQUEST_ID = "requestId";
+    private static final String ATTR_USER_ID = "userId";
+    private static final String ATTR_API_KEY = "apiKey";
+    private static final int STATUS_RATE_LIMITED = 429;
+    private static final int DEFAULT_ERROR_STATUS = 500;
+
     private final KafkaEventPublisher kafkaPublisher;
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
         long startTime = System.currentTimeMillis();
         String requestId = UUID.randomUUID().toString();
-        exchange.getAttributes().put("requestId", requestId);
+        exchange.getAttributes().put(ATTR_REQUEST_ID, requestId);
 
-        return chain.filter(exchange).then(Mono.fromRunnable(() -> {
-            long duration = System.currentTimeMillis() - startTime;
-            ServerHttpRequest request = exchange.getRequest();
+        return chain.filter(exchange)
+                .then(Mono.fromRunnable(() -> publishEvent(exchange, requestId, startTime)));
+    }
 
-            // Extract Attributes set by Auth Filter
-            String userId = exchange.getAttribute("userId");
-            String apiKey = exchange.getAttribute("apiKey");
+    private void publishEvent(ServerWebExchange exchange, String requestId, long startTime) {
+        long latency = System.currentTimeMillis() - startTime;
+        ServerHttpRequest request = exchange.getRequest();
+        int status = getResponseStatus(exchange);
 
-            // Determine the status and event type
-            int status = exchange.getResponse().getStatusCode() != null
-                    ? exchange.getResponse().getStatusCode().value()
-                    : 500;
-            String eventType = (status == 429) ? "BLOCKED" : "ALLOWED";
+        RequestEvent event = RequestEvent.builder()
+                .timestamp(Instant.now().toString())
+                .requestId(requestId)
+                .ip(extractClientIp(request))
+                .userId(exchange.getAttribute(ATTR_USER_ID))
+                .apiKey(exchange.getAttribute(ATTR_API_KEY))
+                .endpoint(request.getPath().value())
+                .method(request.getMethod().name())
+                .status(status)
+                .latencyMs(latency)
+                .type(status == STATUS_RATE_LIMITED ? "BLOCKED" : "ALLOWED")
+                .build();
 
-            RequestEvent event = RequestEvent.builder()
-                    .timestamp(Instant.now().toString())
-                    .requestId(requestId)
-                    .ip(request.getRemoteAddress() != null ? request.getRemoteAddress().getAddress().getHostAddress()
-                            : "unknown")
-                    .userId(userId)
-                    .apiKey(apiKey)
-                    .endpoint(request.getPath().value())
-                    .method(request.getMethod().name())
-                    .status(status)
-                    .latencyMs(duration)
-                    .type(eventType)
-                    .build();
+        kafkaPublisher.publishEvent(event);
+    }
 
-            kafkaPublisher.publishEvent(event);
-        }));
+    private int getResponseStatus(ServerWebExchange exchange) {
+        return exchange.getResponse().getStatusCode() != null
+                ? exchange.getResponse().getStatusCode().value()
+                : DEFAULT_ERROR_STATUS;
+    }
+
+    private String extractClientIp(ServerHttpRequest request) {
+        return request.getRemoteAddress() != null
+                ? request.getRemoteAddress().getAddress().getHostAddress()
+                : "unknown";
     }
 
     @Override
     public int getOrder() {
-        return Ordered.LOWEST_PRECEDENCE; // Post-filter needs to run last in response phase
+        return Ordered.LOWEST_PRECEDENCE;
     }
 }
